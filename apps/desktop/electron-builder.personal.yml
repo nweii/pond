@@ -1,0 +1,6 @@
+# Builds a local Pond application using the existing library and no release update feed.
+extends: ./electron-builder.yml
+publish: null
+mac:
+  notarize: false
+  identity: "-"

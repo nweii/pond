@@ -58,7 +58,8 @@
     "smoke:offline-release": "node ./scripts/smoke-offline-release.mjs",
     "generate:harvest": "node scripts/generate-harvest-validation.mjs",
     "generate": "pnpm generate:harvest",
-    "generate:check": "pnpm generate:harvest --check"
+    "generate:check": "pnpm generate:harvest --check",
+    "dist:mac:personal": "pnpm run build && node ./scripts/build-apple-model.mjs && node ./scripts/build-icon-style.mjs && node ./scripts/build-dock-tile.mjs && node ./scripts/build-native-host.mjs && node ./scripts/fetch-mac-ffmpeg.mjs && node ./scripts/build-safari-extension.mjs && node ./scripts/build-share-extension.mjs && electron-builder --mac --arm64 --dir --config electron-builder.personal.yml --publish never"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.54",

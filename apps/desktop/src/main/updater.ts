@@ -1,3 +1,6 @@
+// Connects release update checks only when the packaged app includes a publishing feed.
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { app } from "electron";
 import log from "electron-log/main.js";
 import { IPC } from "../shared/constants";
@@ -48,6 +51,12 @@ function handoffDownloadedUpdate(install: () => void): Promise<void> {
   return handoff;
 }
 
+function hasUpdateFeed(): boolean {
+  return (
+    app.isPackaged && existsSync(join(process.resourcesPath, "app-update.yml"))
+  );
+}
+
 async function loadUpdater(): Promise<UpdaterPort> {
   const { default: electronUpdaterPkg } = await import("electron-updater");
   const autoUpdater = electronUpdaterPkg.autoUpdater;
@@ -89,7 +98,7 @@ async function loadUpdater(): Promise<UpdaterPort> {
 }
 
 const updater = createUpdaterCoordinator({
-  isPackaged: () => app.isPackaged,
+  isPackaged: hasUpdateFeed,
   loadUpdater,
   loadPreferences: async () => {
     const { autoInstall } = (await getPrefs()).updates;
@@ -108,8 +117,8 @@ const updater = createUpdaterCoordinator({
 
 export function registerAutoUpdater(): void {
   if (wired) return;
-  if (!app.isPackaged) {
-    log.info("[pond updater] skipped (dev build)");
+  if (!hasUpdateFeed()) {
+    log.info("[pond updater] skipped (no packaged update feed)");
     return;
   }
   wired = true;

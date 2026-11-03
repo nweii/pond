@@ -1,6 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { app } from "electron";
 import log from "electron-log/main.js";
 import { z } from "zod";
 import {
@@ -83,11 +82,14 @@ function withAccess<Args extends unknown[]>(
   };
 }
 
-export async function startPondMcp(): Promise<void> {
+export async function startPondMcp(
+  version: string,
+  quit: () => void,
+): Promise<void> {
   log.transports.console.level = false;
   const server = new McpServer({
     name: "pond",
-    version: app.getVersion(),
+    version,
   });
 
   server.registerTool(
@@ -242,18 +244,18 @@ export async function startPondMcp(): Promise<void> {
 
   const transport = new StdioServerTransport();
   let quitting = false;
-  const quit = (reason: string) => {
+  const quitOnce = (reason: string) => {
     if (quitting) return;
     quitting = true;
     stopWatching();
     log.info("[pond mcp] host disconnected; quitting", reason);
-    app.quit();
+    quit();
   };
-  transport.onclose = () => quit("transport-closed");
+  transport.onclose = () => quitOnce("transport-closed");
   const stopWatching = watchMcpHost({
     stdin: process.stdin,
     parentPid: () => process.ppid,
-    onLost: quit,
+    onLost: quitOnce,
     every: (run, ms) => {
       const timer = setInterval(run, ms);
       timer.unref();

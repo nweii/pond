@@ -84,6 +84,7 @@ export default defineConfig({
             __dirname,
             "src/main/core/pipeline/queue-worker.ts",
           ),
+          "mcp-server": resolve(__dirname, "src/main/mcp-server.ts"),
         },
         /** Native modules resolve their platform .node binaries at runtime; `re2` isn't built here, so external lets url-regex-safe fall back to plain RegExp. */
         external: ["electron", "better-sqlite3", "sqlite-vec", "sharp", "re2"],

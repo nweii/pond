@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs Pond's MCP server as plain Node through Pond's background helper, so macOS
+# never adds it to the Dock or sends it Dock clicks.
+resources=$(cd -- "$(dirname -- "$0")" && pwd -P)
+ELECTRON_RUN_AS_NODE=1 exec "$resources/../Frameworks/Pond Helper.app/Contents/MacOS/Pond Helper" \
+  "$resources/app.asar/out/main/mcp-server.js"

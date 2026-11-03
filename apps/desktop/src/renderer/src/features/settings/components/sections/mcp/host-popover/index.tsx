@@ -3,9 +3,11 @@ import { Button, Popover } from "@pond/ui";
 import {
   hostSetupCommands,
   isMcpDeeplinkHost,
+  type McpConnection,
   type McpHostDefinition,
   mcpHostConfigPath,
 } from "@shared/mcp-hosts";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CopyLine } from "../copy-line";
 import { JsonBlock } from "../json-block";
@@ -17,6 +19,13 @@ type PondSnippet = {
   json: string;
 };
 
+const CONNECTION_LEAD = {
+  none: "The agent can search and read saves.",
+  connected: "Pond is set up. The agent can search and read saves.",
+  outdated:
+    "Pond is set up with its old command, which adds Pond to the Dock each session. Set it up again to switch.",
+} satisfies Record<McpConnection, string>;
+
 export function HostPopover({
   host,
   snippet,
@@ -25,8 +34,19 @@ export function HostPopover({
   snippet?: PondSnippet;
 }) {
   const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
+  /** Reads the client's config only while its popover is open. */
+  const clients = useQuery({
+    queryKey: ["mcp-clients"],
+    queryFn: () => window.pond.query("agent.mcpClients", {}),
+    enabled: open,
+    retry: false,
+  });
+  const connection =
+    clients.data?.clients.find((client) => client.id === host.id)?.connection ??
+    "none";
   const commands = snippet
-    ? hostSetupCommands(host.id, snippet.command, snippet.args)
+    ? hostSetupCommands(host.id, snippet.command, snippet.args, connection)
     : [];
   const json = snippet?.json ?? "";
   const deeplink = isMcpDeeplinkHost(host.id) ? host.id : null;
@@ -50,7 +70,7 @@ export function HostPopover({
   }
 
   return (
-    <Popover.Root>
+    <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
         render={<Button icon size="xs" variant="ghost" />}
         aria-label={`Set up ${host.name}`}
@@ -61,7 +81,7 @@ export function HostPopover({
         <Popover.Positioner side="left" align="start" sideOffset={8}>
           <Popover.Popup className={styles.popup}>
             <Popover.Title className={styles.title}>{host.name}</Popover.Title>
-            <p className={styles.lead}>The agent can search and read saves.</p>
+            <p className={styles.lead}>{CONNECTION_LEAD[connection]}</p>
             {deeplink ? (
               <Button size="sm" onClick={() => void addToClient()}>
                 {host.addLabel}

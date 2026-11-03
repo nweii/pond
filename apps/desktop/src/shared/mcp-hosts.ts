@@ -10,15 +10,22 @@ export const MCP_HOST_IDS = [
 
 export type McpHostId = (typeof MCP_HOST_IDS)[number];
 
-export const MCP_DETECTED_CLIENTS = ["cursor", "claude-desktop"] as const;
+export const MCP_DETECTED_CLIENTS = [
+  "claude-code",
+  "cursor",
+  "codex",
+  "claude-desktop",
+] as const;
 
 export type McpDetectedClient = (typeof MCP_DETECTED_CLIENTS)[number];
+
+/** `outdated`: a Pond server still starts the macOS app binary, which works but adds Pond to the Dock for every session. */
+export type McpConnection = "none" | "connected" | "outdated";
 
 export interface McpClientStatus {
   id: McpDetectedClient;
   installed: boolean;
-  /** Whether the client's config already lists a Pond server. */
-  connected: boolean;
+  connection: McpConnection;
 }
 
 export const MCP_DEEPLINK_HOSTS = ["cursor", "vscode"] as const;
@@ -123,10 +130,22 @@ export function hostSetupCommands(
   id: McpHostId,
   command: string,
   args: string[],
+  connection: McpConnection = "none",
 ): McpSetupCommand[] {
   const launch = pondLaunchLine(command, args);
   if (id === "claude-code") {
+    /** `claude mcp add` refuses a name that already exists. */
+    const remove =
+      connection === "outdated"
+        ? [
+            {
+              label: "Remove the old server:",
+              value: "claude mcp remove --scope user pond",
+            },
+          ]
+        : [];
     return [
+      ...remove,
       {
         label:
           "Run in any terminal. --scope user makes it available in every project:",

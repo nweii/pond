@@ -1,13 +1,14 @@
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import type { Server as NetServer } from "node:net";
-import { join, resolve as resolvePath } from "node:path";
+import { resolve as resolvePath } from "node:path";
 import { SAFARI_APP_GROUP } from "@pond/schema/native";
 import { app, globalShortcut, ipcMain, powerMonitor } from "electron";
 import log from "electron-log/main.js";
 import { DEFAULT_APP_ICON } from "../shared/app-icons";
 import { IPC, type RecentMenuEntry } from "../shared/constants";
 import type { ShortcutId } from "../shared/shortcuts";
+import { sandboxAppPaths } from "./app-paths";
 import { fishMcp } from "./core/agent/fish-mcp/live";
 import { startAutoImport, stopAutoImport } from "./core/auto-import";
 import { captures } from "./core/captures";
@@ -134,16 +135,11 @@ disableMenuActionImages();
 limitSharpMemory();
 
 if (process.env.POND_SANDBOX) {
-  const sandbox = resolvePath(process.env.POND_SANDBOX);
+  const sandbox = sandboxAppPaths(process.env.POND_SANDBOX);
   /** setPath does not create directories, and Chromium expects sessionData to exist. */
-  for (const [name, dir] of [
-    ["userData", join(sandbox, "app-data")],
-    ["sessionData", join(sandbox, "chromium")],
-    ["logs", join(sandbox, "logs")],
-    ["home", join(sandbox, "home")],
-  ] as const) {
-    mkdirSync(dir, { recursive: true });
-    app.setPath(name, dir);
+  for (const name of ["userData", "sessionData", "logs", "home"] as const) {
+    mkdirSync(sandbox[name], { recursive: true });
+    app.setPath(name, sandbox[name]);
   }
 }
 if (process.platform === "darwin") {
@@ -306,7 +302,7 @@ app.whenReady().then(async () => {
       log.error("[pond] ingest token init failed; MCP starts without one", err),
     );
     const { startPondMcp } = await import("./core/agent/mcp");
-    await startPondMcp();
+    await startPondMcp(app.getVersion(), () => app.quit());
     return;
   }
 

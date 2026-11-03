@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
-import { app } from "electron";
 import log from "electron-log/main.js";
 import { z } from "zod";
+import { appPath } from "../app-paths";
 import { writeLibraryPointer } from "../lib/library-pointer";
 import { renameSyncWithRetry } from "../lib/rename-retry";
 import { readLibraryIdentity } from "./library-identity";
@@ -50,7 +50,7 @@ export function commitLibraryPointer(absPath: string): void {
   writeLibraryPointer(absPath);
   try {
     recordRecentLibrary(
-      join(app.getPath("userData"), "recent-libraries.json"),
+      join(appPath("userData"), "recent-libraries.json"),
       absPath,
     );
   } catch (error) {

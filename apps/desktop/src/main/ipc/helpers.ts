@@ -3,7 +3,7 @@ import { sep as pathSep, resolve as resolvePath } from "node:path";
 import { saves } from "@pond/schema/db";
 import { eq, inArray } from "drizzle-orm";
 import type { IpcMain, IpcMainInvokeEvent } from "electron";
-import { ipcMain } from "electron";
+import * as electron from "electron";
 import log from "electron-log/main.js";
 import { POND_PROTOCOL } from "../../shared/constants";
 import type { ReasonResult } from "../../shared/query-contracts-shared";
@@ -34,7 +34,7 @@ function isInsideLibrary(absolute: string): boolean {
 export function safeHandle<Args extends unknown[], R>(
   channel: string,
   handler: (event: IpcMainInvokeEvent, ...args: Args) => R,
-  bus: IpcMain = ipcMain,
+  bus: IpcMain = electron.ipcMain,
 ): void {
   bus.handle(channel, (event: IpcMainInvokeEvent, ...args: Args) => {
     if (!isTrustedSender(event)) {

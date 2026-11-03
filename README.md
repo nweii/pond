@@ -115,14 +115,14 @@ Cursor, Claude, and other MCP hosts can search the same library. Pond speaks MCP
 {
   "mcpServers": {
     "pond": {
-      "command": "/Applications/Pond.app/Contents/MacOS/Pond",
+      "command": "/Applications/Pond.app/Contents/Resources/pond-mcp",
       "args": ["--mcp"]
     }
   }
 }
 ```
 
-On Windows the command is the installed `Pond.exe`, by default `C:\Users\<you>\AppData\Local\Programs\Pond\Pond.exe`. Copy the exact command from Settings → Model Context Protocol → Advanced. Pond does not host a public MCP URL.
+On macOS, `pond-mcp` runs the server in the background, so MCP clients never add Pond to the Dock. A config that starts `Pond.app/Contents/MacOS/Pond` still works; Settings → Model Context Protocol shows how to switch it. On Windows the command is the installed `Pond.exe`, by default `C:\Users\<you>\AppData\Local\Programs\Pond\Pond.exe`. Copy the exact command from Settings → Model Context Protocol → Advanced. Pond does not host a public MCP URL.
 
 ## Library
 

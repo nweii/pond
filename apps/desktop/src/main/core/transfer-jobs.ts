@@ -8,7 +8,6 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { join } from "node:path";
-import { app } from "electron";
 import { ulid } from "ulid";
 import { z } from "zod";
 import type { OkResult } from "../../shared/query-contracts-shared";
@@ -17,6 +16,7 @@ import {
   TransferJobSchema,
   type TransferRequest,
 } from "../../shared/transfer-contracts";
+import { appPath } from "../app-paths";
 import { renameWithRetry } from "../lib/rename-retry";
 import { libraryRoot } from "../paths";
 import { runLibraryTransfer } from "./library-transfers";
@@ -206,9 +206,7 @@ export function createTransferJobStore(directory: string) {
 }
 let store: ReturnType<typeof createTransferJobStore> | undefined;
 export function transferJobStore() {
-  store ??= createTransferJobStore(
-    join(app.getPath("userData"), "transfer-jobs"),
-  );
+  store ??= createTransferJobStore(join(appPath("userData"), "transfer-jobs"));
   return store;
 }
 export function runTransferJob<T>(

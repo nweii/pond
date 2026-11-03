@@ -14,12 +14,12 @@ import {
 } from "@pond/schema/db";
 import type { SyncActionPayload, Transaction, TxMeta } from "@pond/schema/tx";
 import { and, eq } from "drizzle-orm";
-import { BrowserWindow } from "electron";
 import log from "electron-log/main.js";
 import { ulid } from "ulid";
 import { IPC } from "../../shared/constants";
 import { getDb } from "../db";
 import { toWireSyncAction } from "../ipc/wire";
+import { broadcast } from "../lib/broadcast";
 import {
   patchSaveFiles,
   removeSave,
@@ -553,12 +553,7 @@ export function registerSyncActionListener(fn: SyncActionListener): () => void {
 }
 
 export function broadcastSyncAction(action: SyncAction): void {
-  const wire = toWireSyncAction(action);
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send(IPC.syncAction, wire);
-    }
-  }
+  broadcast(IPC.syncAction, toWireSyncAction(action));
   for (const fn of syncActionListeners) {
     try {
       fn(action);

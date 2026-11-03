@@ -83,8 +83,8 @@ describe("pickPrompt", () => {
         signals({
           ...later,
           mcp: [
-            { id: "cursor", installed: true, connected: true },
-            { id: "claude-desktop", installed: true, connected: false },
+            { id: "cursor", installed: true, connection: "connected" },
+            { id: "claude-desktop", installed: true, connection: "none" },
           ],
         }),
         none,

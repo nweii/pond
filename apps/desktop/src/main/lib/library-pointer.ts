@@ -7,8 +7,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, join, resolve, win32 } from "node:path";
-import { app } from "electron";
 import { z } from "zod";
+import { appPath } from "../app-paths";
 
 const POINTER_FILE = "library-location.json";
 
@@ -21,7 +21,7 @@ interface PointerFile {
 const StoredPointerSchema = z.object({ path: z.string().min(1) });
 
 function pointerPath(): string {
-  return join(app.getPath("userData"), POINTER_FILE);
+  return join(appPath("userData"), POINTER_FILE);
 }
 
 export function isPathInside(
@@ -44,7 +44,7 @@ export function readLibraryPointer(): string | null {
     if (!parsed.success) return null;
     const candidate = parsed.data.path;
     const abs = isAbsolute(candidate) ? candidate : resolve(candidate);
-    if (isPathInside(app.getPath("userData"), abs)) return null;
+    if (isPathInside(appPath("userData"), abs)) return null;
     return abs;
   } catch {
     return null;
@@ -76,7 +76,7 @@ interface PointerSafetyReport {
 
 export function checkPointerSafety(target: string): PointerSafetyReport {
   const abs = isAbsolute(target) ? target : resolve(target);
-  if (isPathInside(app.getPath("userData"), abs)) {
+  if (isPathInside(appPath("userData"), abs)) {
     return { ok: false, reason: "inside_user_data" };
   }
   try {

@@ -5,7 +5,15 @@ import {
   mcpHostConfigPath,
   pondLaunchLine,
 } from "../../../shared/mcp-hosts";
-import { configListsPond, mcpInstallUrl, pondMcpSnippet } from "./mcp-hosts";
+import {
+  configListsPond,
+  mcpInstallUrl,
+  pondConnection,
+  pondMcpSnippet,
+} from "./mcp-hosts";
+
+const APP_BINARY = "/Applications/Pond.app/Contents/MacOS/Pond";
+const LAUNCHER = "/Applications/Pond.app/Contents/Resources/pond-mcp";
 
 describe("mcp hosts", () => {
   it("builds Claude Code setup commands from the Pond launch", () => {
@@ -69,5 +77,54 @@ describe("mcp hosts", () => {
       configListsPond(JSON.stringify({ mcpServers: { linear: {} } })),
     ).toBe(false);
     expect(configListsPond("")).toBe(false);
+  });
+
+  it("reports a Pond server that still starts the app binary as outdated", () => {
+    const config = (command: string) =>
+      JSON.stringify(
+        { mcpServers: { pond: { type: "stdio", command, args: ["--mcp"] } } },
+        null,
+        2,
+      );
+    expect(
+      pondConnection(config(APP_BINARY), "json", APP_BINARY, LAUNCHER),
+    ).toBe("outdated");
+    expect(pondConnection(config(LAUNCHER), "json", APP_BINARY, LAUNCHER)).toBe(
+      "connected",
+    );
+    expect(
+      pondConnection(config(APP_BINARY), "json", APP_BINARY, APP_BINARY),
+    ).toBe("connected");
+    expect(
+      pondConnection('{"mcpServers":{}}', "json", APP_BINARY, LAUNCHER),
+    ).toBe("none");
+  });
+
+  it("reads Pond servers from a Codex TOML config", () => {
+    const codex = (command: string) =>
+      `model = "gpt-5"\n\n[mcp_servers.pond]\ncommand = "${command}"\nargs = ["--mcp"]\n`;
+    expect(
+      pondConnection(codex(APP_BINARY), "toml", APP_BINARY, LAUNCHER),
+    ).toBe("outdated");
+    expect(pondConnection(codex(LAUNCHER), "toml", APP_BINARY, LAUNCHER)).toBe(
+      "connected",
+    );
+    expect(
+      pondConnection('model = "gpt-5"\n', "toml", APP_BINARY, LAUNCHER),
+    ).toBe("none");
+  });
+
+  it("asks Claude Code to remove an outdated server before adding it again", () => {
+    const commands = hostSetupCommands(
+      "claude-code",
+      LAUNCHER,
+      ["--mcp"],
+      "outdated",
+    );
+    expect(commands.map((command) => command.value)).toEqual([
+      "claude mcp remove --scope user pond",
+      `claude mcp add --scope user pond -- ${LAUNCHER} --mcp`,
+      "claude mcp get pond",
+    ]);
   });
 });

@@ -9,6 +9,14 @@ import { resolveWindowsCommand, windowsInvocation } from "../windows-command";
 import { findPondExecutable } from "../windows-install";
 import { action, commandContext } from "./shared";
 
+async function macMcpExecutable(): Promise<string> {
+  const launcher = "/Applications/Pond.app/Contents/Resources/pond-mcp";
+  return access(launcher).then(
+    () => launcher,
+    () => "/Applications/Pond.app/Contents/MacOS/Pond",
+  );
+}
+
 export function registerIntegrationCommands(
   program: Command,
   skillSource: URL,
@@ -17,7 +25,7 @@ export function registerIntegrationCommands(
   action(program, mcp.command("serve"), async () => {
     const executable =
       process.platform === "darwin"
-        ? "/Applications/Pond.app/Contents/MacOS/Pond"
+        ? await macMcpExecutable()
         : process.platform === "win32"
           ? (findPondExecutable() ?? "")
           : "pond-desktop";

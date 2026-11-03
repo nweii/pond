@@ -24,6 +24,11 @@ export function userBinDir(): string {
   return join(app.getPath("userData"), "bin");
 }
 
+/** The ffmpeg electron-builder copies into a packaged app. */
+export function bundledFfmpegPath(): string {
+  return join(process.resourcesPath, "bin", FFMPEG_FILENAME);
+}
+
 let cached: ResolvedBinaries | null = null;
 
 export function binariesAvailable(): ResolvedBinaries {
@@ -52,9 +57,7 @@ function resolveFfmpeg(): string | null {
   const handed = process.env[FFMPEG_PATH_ENV];
   if (handed && existsSync(handed)) return handed;
   const candidates: string[] = [];
-  if (app?.isPackaged) {
-    candidates.push(join(process.resourcesPath, "bin", FFMPEG_FILENAME));
-  }
+  if (app?.isPackaged) candidates.push(bundledFfmpegPath());
   candidates.push(
     resolve(__dirname, "../../../node_modules/ffmpeg-static", FFMPEG_FILENAME),
   );

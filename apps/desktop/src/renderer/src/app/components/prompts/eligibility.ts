@@ -29,7 +29,11 @@ function usedFor(signals: PromptSignals, days: number): boolean {
 
 function wantsMcp(signals: PromptSignals, id: McpClientStatus["id"]): boolean {
   const client = signals.mcp.find((entry) => entry.id === id);
-  return Boolean(client?.installed && !client.connected) && usedFor(signals, 3);
+  return (
+    client?.installed === true &&
+    client.connection === "none" &&
+    usedFor(signals, 3)
+  );
 }
 
 /** Earlier entries win; time-limited and celebratory asks come before evergreen ones. */

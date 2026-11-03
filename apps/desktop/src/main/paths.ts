@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { app } from "electron";
+import { appPath } from "./app-paths";
 import { resolveLibraryId } from "./lib/library-id";
 import {
   classifyLibraryPlacement,
@@ -36,7 +36,7 @@ function ensureDir(p: string): string {
 }
 
 function defaultLibraryRoot(): string {
-  return join(app.getPath("home"), "Pond", "My Pond.pond");
+  return join(appPath("home"), "Pond", "My Pond.pond");
 }
 
 export function invalidatePaths(): void {
@@ -46,7 +46,7 @@ export function invalidatePaths(): void {
 export function resolvePaths(libraryRootOverride?: string): PondPaths {
   if (cached && !libraryRootOverride) return cached;
 
-  const appData = ensureDir(app.getPath("userData"));
+  const appData = ensureDir(appPath("userData"));
   /** Keep Pond derivatives separate from Chromium's case-insensitive `Cache` directory. */
   const cache = ensureDir(join(appData, "pond-cache"));
   const indexesDir = ensureDir(join(appData, "indexes"));

@@ -123,6 +123,8 @@ mac:
     # scripts/fetch-mac-ffmpeg.mjs rather than the runner-only ffmpeg-static copy.
     - from: vendor/ffmpeg/darwin-${arch}/ffmpeg
       to: bin/ffmpeg
+    - from: packaging/pond-mcp
+      to: pond-mcp
     # Loaded by the main process to open Safari at Pond's extension; Safari answers
     # only the main process of the app that holds the extension.
     - from: resources/SafariExtension/safari-settings.node

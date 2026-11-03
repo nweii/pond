@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { app } from "electron";
 import log from "electron-log/main.js";
 import { DEFAULT_LIBRARY_NAME } from "../../shared/constants";
 import { libraryFilename } from "../../shared/file-format";
+import { appPath } from "../app-paths";
 import { readOrCreateLibraryId } from "../lib/library-id";
 import { checkPointerSafety, readLibraryPointer } from "../lib/library-pointer";
 import { normalizeLibraryPath } from "../lib/path-identity";
@@ -56,7 +56,7 @@ export function createPondBundle(
 export function ensureDefaultLibrary(): void {
   if (readLibraryPointer()) return;
 
-  const parentDir = join(app.getPath("home"), "Pond");
+  const parentDir = join(appPath("home"), "Pond");
   const defaultRoot = join(parentDir, `${DEFAULT_LIBRARY_NAME}.pond`);
 
   if (existsSync(defaultRoot)) {

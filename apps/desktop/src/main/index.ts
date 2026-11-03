@@ -649,5 +649,9 @@ app.on("before-quit", async (event) => {
     log.warn("[pond] quit stalled; exiting");
     app.exit(0);
   }, QUIT_STALL_MS).unref();
-  app.quit();
+  /**
+   * When every step above settles without I/O, the handler gets here before Electron returns from the prevented `before-quit`.
+   * Quitting synchronously would start closing windows, then Electron would mark the quit cancelled and Pond would wait out `QUIT_STALL_MS`.
+   */
+  setImmediate(() => app.quit());
 });

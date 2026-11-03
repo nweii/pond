@@ -14,6 +14,7 @@ import {
   openNotificationSettings,
 } from "../../core/feedback";
 import { globalShortcutStatus } from "../../core/global-shortcuts";
+import { macosMajor, readIconStyle } from "../../core/icon-style";
 import {
   getDownloadConfig,
   getPrefs,
@@ -175,6 +176,12 @@ export const settingsQueries = {
 
   "settings.globalShortcutStatus"() {
     return globalShortcutStatus();
+  },
+  "settings.appIconAppearance"() {
+    return {
+      style: readIconStyle(),
+      macosMajor: macosMajor(process.platform, process.getSystemVersion()),
+    };
   },
   async "settings.getPrefs"() {
     return await getPrefs();

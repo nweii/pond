@@ -1,7 +1,6 @@
 import { readdir, stat, statfs } from "node:fs/promises";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import log from "electron-log/main.js";
-import pLimit from "p-limit";
 import { createMemoCache } from "../lib/memo-cache";
 import { libraryRoot, savesRoot, thumbnailCacheRoot } from "../paths";
 
@@ -52,10 +51,8 @@ export async function getStorageSnapshot(): Promise<StorageSnapshot> {
 
 async function computeSnapshot(): Promise<StorageSnapshot> {
   const root = libraryRoot();
-  const [breakdown, device] = await Promise.all([
-    computeLibraryBreakdown(),
-    getDeviceDiskInfo(root),
-  ]);
+  const breakdown = await computeLibraryBreakdown();
+  const device = await getDeviceDiskInfo(root);
   return {
     pondBytes: breakdown.total,
     breakdown: {
@@ -102,25 +99,30 @@ async function computeLibraryBreakdown(): Promise<LibraryBreakdown> {
     return { ...buckets, total: 0 };
   }
 
-  const [entrySizes, extraItems, thumbs, db] = await Promise.all([
-    Promise.all(
-      entries.map((entry) =>
-        entry.isDir ? sumDirSizes(entry.abs) : safeFileSize(entry.abs),
-      ),
-    ),
-    !entries.some((e) => e.abs === itemsAbs) && itemsAbs.startsWith(root)
-      ? sumDirSizes(itemsAbs)
-      : 0,
-    sumDirSizes(thumbnailCacheRoot()),
-    indexDbSize(),
-  ]);
-  entries.forEach((entry, index) => {
+  for (const entry of entries) {
     const known = KNOWN_BUCKETS.find((k) => k.dir === entry.name);
-    buckets[known?.bucket ?? "other"] += entrySizes[index] ?? 0;
-  });
-  buckets.items += extraItems;
-  buckets.thumbs += thumbs;
-  buckets.db += db;
+    const bucket = known?.bucket ?? "other";
+    if (entry.isDir) {
+      buckets[bucket] += await sumDirSizes(entry.abs);
+    } else {
+      buckets[bucket] += await safeFileSize(entry.abs);
+    }
+  }
+
+  if (!entries.some((e) => e.abs === itemsAbs) && itemsAbs.startsWith(root)) {
+    buckets.items += await sumDirSizes(itemsAbs);
+  }
+
+  buckets.thumbs += await sumDirSizes(thumbnailCacheRoot());
+
+  try {
+    const dbPath = (await import("../paths")).resolvePaths().indexDb;
+    buckets.db += await safeFileSize(dbPath);
+    buckets.db += await safeFileSize(`${dbPath}-wal`);
+    buckets.db += await safeFileSize(`${dbPath}-shm`);
+  } catch (err) {
+    log.warn("[pond storage-stats] failed to stat indexDb", err);
+  }
 
   const total =
     buckets.items +
@@ -148,45 +150,33 @@ async function getDeviceDiskInfo(path: string): Promise<DeviceDiskInfo> {
   }
 }
 
-async function indexDbSize(): Promise<number> {
-  try {
-    const dbPath = (await import("../paths")).resolvePaths().indexDb;
-    const sizes = await Promise.all(
-      [dbPath, `${dbPath}-wal`, `${dbPath}-shm`].map(safeFileSize),
-    );
-    return sizes.reduce((sum, size) => sum + size, 0);
-  } catch (err) {
-    log.warn("[pond storage-stats] failed to stat indexDb", err);
-    return 0;
-  }
-}
-
-/** Caps in-flight readdir/stat calls so a large library walk never floods libuv's shared thread pool. */
-const fsLimit = pLimit(8);
-
 async function sumDirSizes(dir: string): Promise<number> {
+  let total = 0;
   let dirents: import("node:fs").Dirent[];
   try {
-    dirents = await fsLimit(() => readdir(dir, { withFileTypes: true }));
+    dirents = await readdir(dir, { withFileTypes: true });
   } catch (err) {
     log.debug("[pond storage-stats] readdir failed", dir, err);
     return 0;
   }
-  const sizes = await Promise.all(
-    dirents.map((entry) => {
-      if (entry.isSymbolicLink()) return 0;
-      const abs = join(dir, entry.name);
-      if (entry.isDirectory()) return sumDirSizes(abs);
-      if (entry.isFile()) return safeFileSize(abs);
-      return 0;
-    }),
-  );
-  return sizes.reduce((sum, size) => sum + size, 0);
+  for (const entry of dirents) {
+    if (entry.isSymbolicLink()) continue;
+    const abs = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      total += await sumDirSizes(abs);
+      if (abs.split(sep).length % 4 === 0) {
+        await Promise.resolve();
+      }
+    } else if (entry.isFile()) {
+      total += await safeFileSize(abs);
+    }
+  }
+  return total;
 }
 
 async function safeFileSize(path: string): Promise<number> {
   try {
-    const s = await fsLimit(() => stat(path));
+    const s = await stat(path);
     return Number.isFinite(s.size) ? s.size : 0;
   } catch {
     return 0;

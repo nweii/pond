@@ -1,5 +1,5 @@
 import { extname } from "node:path";
-import type { Save, SaveFile } from "@pond/schema/db";
+import type { SaveFile } from "@pond/schema/db";
 import { type RawJson, walkCaptureMedia } from "@pond/schema/raw";
 import {
   IMAGE_KIND,
@@ -36,28 +36,14 @@ export async function runFetchBlobs(
   const save = await readSave(saveId);
   if (!save) return;
 
-  const icon =
-    save.source === "web"
-      ? fetchSourceIcon(saveId, save).catch((err) => {
-          log.warn(
-            "[pond pipeline:fetch-blobs] source icon failed",
-            saveId,
-            err,
-          );
-        })
-      : undefined;
-  try {
-    await fetchMissingMedia(saveId, save, ctx);
-  } finally {
-    await icon;
+  if (save.source === "web") {
+    try {
+      await fetchSourceIcon(saveId, save);
+    } catch (err) {
+      log.warn("[pond pipeline:fetch-blobs] source icon failed", saveId, err);
+    }
   }
-}
 
-async function fetchMissingMedia(
-  saveId: string,
-  save: Save,
-  ctx: FetchBlobsContext,
-): Promise<void> {
   const { autoDownload } = await getVideoDownloadPrefs(save.source);
   const urls = collectMediaUrls(save.rawJson, { includeVideo: autoDownload });
   if (urls.length === 0) {

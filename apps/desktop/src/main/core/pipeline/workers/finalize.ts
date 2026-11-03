@@ -66,8 +66,26 @@ export async function runFinalize(saveId: string): Promise<void> {
     });
   }
 
+  if (save.mediaType === "image" && (save.dominantColors ?? []).length === 0) {
+    const files = save.files ?? [];
+    const cover = pickCardFile(files) ?? files[0];
+    if (cover) {
+      const { extractPalette } = await import("../../../lib/palette");
+      const { saveFile } = await import("../../../paths");
+      const colors = await extractPalette(saveFile(saveId, cover.path));
+      if (colors.length > 0) {
+        await persistSave(
+          saveId,
+          { dominantColors: colors },
+          { actorReason: "color:extract" },
+        );
+      }
+    }
+  }
+
+  const latest = (await readSave(saveId)) ?? save;
   const { writeSaveBlurhash } = await import("../../save-blurhash");
-  await Promise.all([writeDominantColors(save), writeSaveBlurhash(save)]);
+  await writeSaveBlurhash(latest);
 
   await persistSave(
     saveId,
@@ -81,23 +99,6 @@ export async function runFinalize(saveId: string): Promise<void> {
     },
   );
   void commitSaveIngestEvent(saveId, { outcome: "complete" });
-}
-
-async function writeDominantColors(save: Save): Promise<void> {
-  if (save.mediaType !== "image" || (save.dominantColors ?? []).length > 0)
-    return;
-  const files = save.files ?? [];
-  const cover = pickCardFile(files) ?? files[0];
-  if (!cover) return;
-  const { extractPalette } = await import("../../../lib/palette");
-  const { saveFile } = await import("../../../paths");
-  const colors = await extractPalette(saveFile(save.id, cover.path));
-  if (colors.length === 0) return;
-  await persistSave(
-    save.id,
-    { dominantColors: colors },
-    { actorReason: "color:extract" },
-  );
 }
 
 async function fetchTaskRows(saveId: string): Promise<Task[]> {

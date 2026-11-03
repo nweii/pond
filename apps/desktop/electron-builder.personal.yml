@@ -3,4 +3,5 @@ extends: ./electron-builder.yml
 publish: null
 mac:
   notarize: false
-  identity: "-"
+  # Apple Development certificate: macOS loads the Dock tile plug-in only from an Apple-issued signature.
+  identity: "Apple Development: nathancheng57@gmail.com (5V225ASZ49)"

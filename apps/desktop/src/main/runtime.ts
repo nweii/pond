@@ -8,6 +8,8 @@ import { setCloseToTray } from "./window";
 
 /** Windows has no wasOpenedAtLogin, so the login item passes this flag instead. */
 export const LOGIN_LAUNCH_ARG = "--hidden";
+/** An MCP process passing on a Dock click: the user asked to see Pond, so a window opens even when Pond launches hidden. */
+export const REOPEN_ARG = "--reopen";
 
 export const runtimeControls = createRuntimeControls({
   getPrefs,

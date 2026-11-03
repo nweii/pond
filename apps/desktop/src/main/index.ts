@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import type { Server as NetServer } from "node:net";
 import { join, resolve as resolvePath } from "node:path";
@@ -83,7 +84,7 @@ import { startNativeServer, stopNativeServer } from "./native/server";
 import { flushOpenFiles, queueOpenFile } from "./open-files";
 import { libraryRoot, type PondPaths, resolvePaths } from "./paths";
 import { registerProtocol, registerScheme } from "./protocol";
-import { LOGIN_LAUNCH_ARG, runtimeControls } from "./runtime";
+import { LOGIN_LAUNCH_ARG, REOPEN_ARG, runtimeControls } from "./runtime";
 import { configureSessionDefaults } from "./session-config";
 import {
   acquireSingleInstanceLock,
@@ -152,7 +153,21 @@ log.info("[pond] main starting", {
 
 const wantsMcp = process.argv.includes("--mcp");
 /** Each MCP client spawns its own headless process, and none of them ever opens a window. */
-if (wantsMcp) app.dock?.hide();
+if (wantsMcp) {
+  app.dock?.hide();
+  /**
+   * macOS identifies apps by bundle, so a Dock click or Finder open of Pond can
+   * land on an MCP process while the window app is not running. Pass it to the
+   * window app, which starts if needed, and stay out of the Dock.
+   */
+  app.on("activate", () => {
+    spawn(process.execPath, [REOPEN_ARG], {
+      detached: true,
+      stdio: "ignore",
+    }).unref();
+    app.dock?.hide();
+  });
+}
 const initialDeepLink = deepLinkArg(process.argv);
 
 let nativeServer: NetServer | null = null;
@@ -295,14 +310,18 @@ app.whenReady().then(async () => {
   const launchPrefs = await getPrefs().catch(() => null);
   const wantsLaunchHidden = launchPrefs?.window.launchHidden === true;
   setCloseToTray(launchPrefs?.window.closeToTray === true);
-  const launchedHidden = resolveLaunchHidden({
-    platform: process.platform,
-    requested:
-      wantsLaunchHidden ||
-      loginItem.wasOpenedAtLogin === true ||
-      (process.platform === "win32" && process.argv.includes(LOGIN_LAUNCH_ARG)),
-    trayEnabled: launchPrefs?.quickCapture.menuBarIcon !== false,
-  });
+  const reopened = process.argv.includes(REOPEN_ARG);
+  const launchedHidden =
+    !reopened &&
+    resolveLaunchHidden({
+      platform: process.platform,
+      requested:
+        wantsLaunchHidden ||
+        loginItem.wasOpenedAtLogin === true ||
+        (process.platform === "win32" &&
+          process.argv.includes(LOGIN_LAUNCH_ARG)),
+      trayEnabled: launchPrefs?.quickCapture.menuBarIcon !== false,
+    });
   if (shouldOpenInitialWindow(launchedHidden, initialDestination)) {
     await createWindow();
   } else {

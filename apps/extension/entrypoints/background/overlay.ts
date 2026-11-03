@@ -12,13 +12,9 @@ const OVERLAY_SCRIPT = "/content-scripts/overlay.js";
 /** Browser pages, store listings, and PDFs refuse scripts, so callers fall back to the toolbar badge. */
 export async function showOverlay(
   tabId: number,
-  request: OverlayRequest | Promise<OverlayRequest>,
+  request: OverlayRequest,
 ): Promise<boolean> {
-  const [resolved, appearance] = await Promise.all([
-    request,
-    overlayAppearance(),
-  ]);
-  const message = { request: resolved, appearance };
+  const message = { request, appearance: await overlayAppearance() };
   try {
     return await sendOverlayMessage("show", message, tabId);
   } catch {

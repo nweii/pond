@@ -205,12 +205,8 @@ export async function offerDraft(
   }
   const { askDetails } = await getSettings();
   if (askDetails && tabId !== undefined) {
-    const request = libraryTargets().then((library) => ({
-      view: "details" as const,
-      draft,
-      library,
-    }));
-    if (await showOverlay(tabId, request)) return;
+    const library = await libraryTargets();
+    if (await showOverlay(tabId, { view: "details", draft, library })) return;
   }
   await saveDraft(draft, tabId);
 }
